@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 
 public class DataSource implements javax.sql.DataSource {
 
+    public static final String MSG_LINE = "==========================================";
     private static org.slf4j.Logger LOG = LoggerFactory.getLogger(DataSource.class);
 
     private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -51,13 +52,10 @@ public class DataSource implements javax.sql.DataSource {
 
     public DataSource(PoolConfiguration poolProperties) {
 
-        LOG.warn("==========================================");
-       LOG.warn("==========================================");
-       LOG.warn("STARTING POOL: "+poolProperties.getPoolName());
-       LOG.warn("==========================================");
-       LOG.warn("==========================================");
-       LOG.warn("==========================================");
-        LOG.warn("Statcc",new Exception());
+        LOG.warn(MSG_LINE);
+        LOG.warn("STARTING POOL: {}", poolProperties.getPoolName());
+        LOG.warn(MSG_LINE);
+        LOG.warn("Statcc", new Exception());
         this.poolProperties = poolProperties;
         Properties properties = DatabaseSettings.readDbProperties();
 
@@ -69,6 +67,10 @@ public class DataSource implements javax.sql.DataSource {
         config.setUsername(poolProperties.getUsername());
         config.setPassword(poolProperties.getPassword());
 
+        config.setMaximumPoolSize(poolProperties.getMaxActive());
+        config.setMinimumIdle(poolProperties.getInitialSize());
+
+
 
         if (poolProperties.getValidationQuery() == null) {
             config.setConnectionTestQuery("SELECT 1");
@@ -79,20 +81,14 @@ public class DataSource implements javax.sql.DataSource {
         startConnectionCleaner();
 
         hikariDataSource = new HikariDataSource(config);
-        try (Connection connection = hikariDataSource.getConnection()) {
-        } catch (SQLException e) {
-           LOG.error("EError connectionL ",e);
-        }
-        LOG.warn("==========================================");
-        LOG.warn("==========================================");
-        LOG.warn("FINISHED POOL CREATION: "+poolProperties.getPoolName());
-        LOG.warn("==========================================");
-        LOG.warn("==========================================");
-        LOG.warn("==========================================");
+
+        LOG.warn(MSG_LINE);
+        LOG.warn("FINISHED POOL CREATION: {}", poolProperties.getPoolName());
+        LOG.warn(MSG_LINE);
 
     }
 
-    void startConnectionCleaner() {
+    private void startConnectionCleaner() {
         scheduledExecutor.scheduleAtFixedRate(new ConnectionCleaner(connections), 0, ConnectionCleaner.CONNECTION_CLEANER_PERIOD, TimeUnit.SECONDS);
     }
 
