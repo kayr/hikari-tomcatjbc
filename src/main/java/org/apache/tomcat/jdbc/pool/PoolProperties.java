@@ -1071,7 +1071,7 @@ public class PoolProperties implements PoolConfiguration, Cloneable, Serializabl
      */
     @Override
     public void setDataSource(Object ds) {
-        if (ds instanceof Datasource) {
+        if (ds instanceof DataSource) {
             throw new IllegalArgumentException("Layered pools are not allowed.");
         }
         this.dataSource = ds;

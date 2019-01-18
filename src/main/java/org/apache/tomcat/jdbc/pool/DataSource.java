@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -17,9 +16,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-public class Datasource implements DataSource {
+public class DataSource implements javax.sql.DataSource {
 
-    private static org.slf4j.Logger LOG = LoggerFactory.getLogger(Datasource.class);
+    private static org.slf4j.Logger LOG = LoggerFactory.getLogger(DataSource.class);
 
     private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private final List<PeConnectionWrapper> connections = new CopyOnWriteArrayList<>();
@@ -50,7 +49,7 @@ public class Datasource implements DataSource {
      * // poolConfiguration.setMinEvictableIdleTimeMillis(tenant.getMinEvictableIdleTimeMillis()); //hikari auto clean after idle timeout
      */
 
-    public Datasource(PoolConfiguration poolProperties) {
+    public DataSource(PoolConfiguration poolProperties) {
 
         LOG.warn("==========================================");
        LOG.warn("==========================================");
@@ -58,6 +57,7 @@ public class Datasource implements DataSource {
        LOG.warn("==========================================");
        LOG.warn("==========================================");
        LOG.warn("==========================================");
+        LOG.warn("Statcc",new Exception());
         this.poolProperties = poolProperties;
         Properties properties = DatabaseSettings.readDbProperties();
 
@@ -79,6 +79,16 @@ public class Datasource implements DataSource {
         startConnectionCleaner();
 
         hikariDataSource = new HikariDataSource(config);
+        try (Connection connection = hikariDataSource.getConnection()) {
+        } catch (SQLException e) {
+           LOG.error("EError connectionL ",e);
+        }
+        LOG.warn("==========================================");
+        LOG.warn("==========================================");
+        LOG.warn("FINISHED POOL CREATION: "+poolProperties.getPoolName());
+        LOG.warn("==========================================");
+        LOG.warn("==========================================");
+        LOG.warn("==========================================");
 
     }
 

@@ -29,7 +29,6 @@ import javax.naming.NamingException;
 import javax.naming.RefAddr;
 import javax.naming.Reference;
 import javax.naming.spi.ObjectFactory;
-import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,7 +220,7 @@ public class DataSourceFactory implements ObjectFactory {
             ok = true;
             XA = true;
         }
-        if (Datasource.class.getName().equals(ref.getClassName())) {
+        if (DataSource.class.getName().equals(ref.getClassName())) {
             ok = true;
         }
 
@@ -538,27 +537,27 @@ public class DataSourceFactory implements ObjectFactory {
     }
 
     /**
-     * Creates and configures a {@link DataSource} instance based on the
+     * Creates and configures a {@link javax.sql.DataSource} instance based on the
      * given properties.
      *
      * @param properties the datasource configuration properties
      * @return the datasource
      * @throws Exception if an error occurs creating the data source
      */
-    public DataSource createDataSource(Properties properties) throws Exception {
+    public javax.sql.DataSource createDataSource(Properties properties) throws Exception {
         return createDataSource(properties, null, false);
     }
 
-    public DataSource createDataSource(Properties properties, Context context, boolean XA) throws Exception {
+    public javax.sql.DataSource createDataSource(Properties properties, Context context, boolean XA) throws Exception {
         PoolConfiguration poolProperties = DataSourceFactory.parsePoolProperties(properties);
         if (poolProperties.getDataSourceJNDI() != null && poolProperties.getDataSource() == null) {
             performJNDILookup(context, poolProperties);
         }
-        Datasource dataSource = null;
+        DataSource dataSource = null;
         if (XA) {
             throw new UnsupportedOperationException("XA Datasource not supported");
         } else {
-            new Datasource(poolProperties);
+            new DataSource(poolProperties);
         }
         //initialise the pool itself
         // Return the configured DataSource instance
