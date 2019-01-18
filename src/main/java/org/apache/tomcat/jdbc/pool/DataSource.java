@@ -55,7 +55,6 @@ public class DataSource implements javax.sql.DataSource {
         LOG.warn(MSG_LINE);
         LOG.warn("STARTING POOL: {}", poolProperties.getPoolName());
         LOG.warn(MSG_LINE);
-        LOG.warn("Statcc", new Exception());
         this.poolProperties = poolProperties;
         Properties properties = DatabaseSettings.readDbProperties();
 
