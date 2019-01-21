@@ -1,6 +1,8 @@
 package org.apache.tomcat.jdbc.pool;
 
 
+import com.zaxxer.hikari.util.ConcurrentBag;
+
 import java.sql.*;
 import java.util.List;
 import java.util.Map;
@@ -8,9 +10,12 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class PeConnectionWrapper implements Connection {
+
+
 
     private List<PeConnectionWrapper> pool = new CopyOnWriteArrayList<>();
     private Connection                connection;

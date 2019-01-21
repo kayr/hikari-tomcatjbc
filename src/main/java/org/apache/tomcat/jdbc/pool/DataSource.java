@@ -2,6 +2,7 @@ package org.apache.tomcat.jdbc.pool;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.util.UtilityElf;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
@@ -10,18 +11,15 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 public class DataSource implements javax.sql.DataSource {
 
-    public static final String MSG_LINE = "==========================================";
-    private static org.slf4j.Logger LOG = LoggerFactory.getLogger(DataSource.class);
+    private static final String MSG_LINE = "==========================================";
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(DataSource.class);
 
-    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    private static final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(10, new UtilityElf.DefaultThreadFactory("awamo-connection-housekeeper", true), new ThreadPoolExecutor.DiscardPolicy());
     private final List<PeConnectionWrapper> connections = new CopyOnWriteArrayList<>();
 
 
@@ -68,7 +66,7 @@ public class DataSource implements javax.sql.DataSource {
 
         config.setMaximumPoolSize(poolProperties.getMaxActive());
         config.setMinimumIdle(poolProperties.getInitialSize());
-
+        config.setScheduledExecutor(scheduledExecutor);
 
 
         if (poolProperties.getValidationQuery() == null) {
@@ -77,7 +75,7 @@ public class DataSource implements javax.sql.DataSource {
             config.setConnectionTestQuery(poolProperties.getValidationQuery());
         }
 
-        startConnectionCleaner();
+        startConnectionCleaner(connections, poolProperties.getPoolName());
 
         hikariDataSource = new HikariDataSource(config);
 
@@ -87,8 +85,10 @@ public class DataSource implements javax.sql.DataSource {
 
     }
 
-    private void startConnectionCleaner() {
-        scheduledExecutor.scheduleAtFixedRate(new ConnectionCleaner(connections), 0, ConnectionCleaner.CONNECTION_CLEANER_PERIOD, TimeUnit.SECONDS);
+
+    private static void startConnectionCleaner(List<PeConnectionWrapper> connections, String poolName) {
+        LOG.info("Starting connection clean for [{}]",poolName);
+        scheduledExecutor.scheduleAtFixedRate(new ConnectionCleaner(connections, poolName), 0, ConnectionCleaner.CONNECTION_CLEANER_PERIOD_SECS, TimeUnit.SECONDS);
     }
 
     public Connection getConnection() throws SQLException {
