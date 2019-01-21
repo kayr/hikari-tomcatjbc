@@ -33,8 +33,8 @@ class ConnectionCleaner implements Runnable {
 
     private void cleanConnections() {
 
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("{} - Connections Before Clean [{}]", name, connections.size());
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("{} - Connections Before Clean [{}]", name, connections.size());
         }
         for (PeConnectionWrapper con : connections) {
             if (con.isExpired()) {
@@ -49,8 +49,8 @@ class ConnectionCleaner implements Runnable {
                 }
             }
         }
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info(" - Connections After Clean [{}]", connections.size());
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace(" - Connections After Clean [{}]", connections.size());
         }
     }
 

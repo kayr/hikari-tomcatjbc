@@ -87,6 +87,7 @@ public class DataSource implements javax.sql.DataSource {
 
 
     private static void startConnectionCleaner(List<PeConnectionWrapper> connections, String poolName) {
+        LOG.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         LOG.info("Starting connection clean for [{}]",poolName);
         scheduledExecutor.scheduleAtFixedRate(new ConnectionCleaner(connections, poolName), 0, ConnectionCleaner.CONNECTION_CLEANER_PERIOD_SECS, TimeUnit.SECONDS);
     }
