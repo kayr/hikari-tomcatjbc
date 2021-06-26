@@ -21,8 +21,8 @@ config.setPassword(poolProperties.getPassword());
 
 POOL SIZE
 ------------------------------
-config.setMinimumIdle(Math.min(poolProperties.getMinIdle(),poolProperties.getInitialSize()));
-config.setMaximumPoolSize(poolProperties.getMaxIdle()+poolProperties.getMaxActive());
+config.setMinimumIdle(Math.min(poolProperties.getMinIdle()));
+config.setMaximumPoolSize(poolProperties.getMaxActive());
 
 if (poolProperties.getValidationQuery() == null) {
     config.setConnectionTestQuery("SELECT 1");

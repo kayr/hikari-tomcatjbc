@@ -1,19 +1,22 @@
 package org.apache.tomcat.jdbc.pool;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.util.UtilityElf;
-import org.slf4j.LoggerFactory;
-
 import java.io.PrintWriter;
-import java.security.Policy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.util.UtilityElf;
+
+import org.slf4j.LoggerFactory;
 
 public class DataSource implements javax.sql.DataSource {
 
@@ -48,7 +51,7 @@ public class DataSource implements javax.sql.DataSource {
 
         // Set POOL Size
         config.setMinimumIdle(Math.min(tomcatConfig.getMinIdle(), tomcatConfig.getInitialSize()));
-        config.setMaximumPoolSize(tomcatConfig.getMaxIdle() + tomcatConfig.getMaxActive());
+        config.setMaximumPoolSize(tomcatConfig.getMaxActive());
 
         
 
