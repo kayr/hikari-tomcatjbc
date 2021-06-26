@@ -21,7 +21,7 @@ config.setPassword(poolProperties.getPassword());
 
 POOL SIZE
 ------------------------------
-config.setMinimumIdle(Math.min(poolProperties.getMinIdle()));
+config.setMinimumIdle(Math.min(tomcatConfig.getMinIdle(), tomcatConfig.getInitialSize()));
 config.setMaximumPoolSize(poolProperties.getMaxActive());
 
 if (poolProperties.getValidationQuery() == null) {
