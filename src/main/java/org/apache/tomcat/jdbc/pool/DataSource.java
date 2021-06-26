@@ -6,6 +6,7 @@ import com.zaxxer.hikari.util.UtilityElf;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
+import java.security.Policy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -19,77 +20,74 @@ public class DataSource implements javax.sql.DataSource {
     private static final String MSG_LINE = "==========================================";
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(DataSource.class);
 
-    private static final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(10, new UtilityElf.DefaultThreadFactory("awamo-connection-housekeeper", true), new ThreadPoolExecutor.DiscardPolicy());
+    private static final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(10,
+            new UtilityElf.DefaultThreadFactory("awamo-connection-housekeeper", true),
+            new ThreadPoolExecutor.DiscardPolicy());
     private final List<PeConnectionWrapper> connections = new CopyOnWriteArrayList<>();
-
 
     private HikariDataSource hikariDataSource;
     private PoolConfiguration poolProperties;
 
-
-    /**
-     * //Ignored But Set in Mifos
-     * ================================================
-     * poolConfiguration.setValidationInterval(tenantConnectionObj.getValidationInterval());
-     * <p>
-     * poolConfiguration.setRemoveAbandoned(tenantConnectionObj.isRemoveAbandoned());
-     * poolConfiguration.setRemoveAbandonedTimeout(tenantConnectionObj.getRemoveAbandonedTimeout());
-     * poolConfiguration.setLogAbandoned(tenantConnectionObj.isLogAbandoned());
-     * poolConfiguration.setAbandonWhenPercentageFull(tenantConnectionObj.getAbandonWhenPercentageFull());
-     * <p>
-     * //this are ignored by mifos so we will use the defaults in hikari
-     * //=====================================================================
-     * // poolConfiguration.setMaxActive(tenant.getMaxActive()); = makes No Sense in Hikari
-     * // poolConfiguration.setMinIdle(tenant.getMinIdle()); = minimumIdle
-     * // poolConfiguration.setMaxIdle(tenant.getMaxIdle()); = maximumPoolSize
-     * <p>
-     * // poolConfiguration.setSuspectTimeout(tenant.getSuspectTimeout()); //simialar to logging stale connection
-     * // poolConfiguration.setTimeBetweenEvictionRunsMillis(tenant.getTimeBetweenEvictionRunsMillis()); //hikari always runs every 30secs
-     * // poolConfiguration.setMinEvictableIdleTimeMillis(tenant.getMinEvictableIdleTimeMillis()); //hikari auto clean after idle timeout
-     */
-
-    public DataSource(PoolConfiguration poolProperties) {
+    public DataSource(PoolConfiguration tomcatConfig) {
 
         LOG.warn(MSG_LINE);
-        LOG.warn("STARTING POOL: {}", poolProperties.getPoolName());
+        LOG.warn("STARTING POOL: {}", tomcatConfig.getPoolName());
         LOG.warn(MSG_LINE);
-        this.poolProperties = poolProperties;
-        Properties properties = DatabaseSettings.readDbProperties();
+        this.poolProperties = tomcatConfig;
 
-        HikariConfig config = new HikariConfig(properties);
+        HikariConfig config = new HikariConfig();
 
-        config.setDriverClassName(poolProperties.getDriverClassName());
-        config.setPoolName(poolProperties.getPoolName());
-        config.setJdbcUrl(poolProperties.getUrl());
-        config.setUsername(poolProperties.getUsername());
-        config.setPassword(poolProperties.getPassword());
-
-        config.setMaximumPoolSize(poolProperties.getMaxActive());
-        config.setMinimumIdle(poolProperties.getInitialSize());
+        config.setDriverClassName(tomcatConfig.getDriverClassName());
+        config.setPoolName(tomcatConfig.getPoolName());
+        config.setJdbcUrl(tomcatConfig.getUrl());
+        config.setUsername(tomcatConfig.getUsername());
+        config.setPassword(tomcatConfig.getPassword());
+        
+        config.setDataSourceProperties(tomcatConfig.getDbProperties());
         config.setScheduledExecutor(scheduledExecutor);
 
+        // Set POOL Size
+        config.setMinimumIdle(Math.min(tomcatConfig.getMinIdle(), tomcatConfig.getInitialSize()));
+        config.setMaximumPoolSize(tomcatConfig.getMaxIdle() + tomcatConfig.getMaxActive());
 
-        if (poolProperties.getValidationQuery() == null) {
+        
+
+
+        //Connection life time
+        config.setMaxLifetime(tomcatConfig.getMaxAge());
+        config.setLeakDetectionThreshold(TimeUnit.SECONDS.toMillis(tomcatConfig.getSuspectTimeout()));
+
+        if (tomcatConfig.getValidationQuery() == null) {
             config.setConnectionTestQuery("SELECT 1");
         } else {
-            config.setConnectionTestQuery(poolProperties.getValidationQuery());
+            config.setConnectionTestQuery(tomcatConfig.getValidationQuery());
         }
 
-        startConnectionCleaner(connections, poolProperties.getPoolName());
+        startConnectionCleaner(connections, tomcatConfig);
 
         hikariDataSource = new HikariDataSource(config);
 
         LOG.warn(MSG_LINE);
-        LOG.warn("FINISHED POOL CREATION: {}", poolProperties.getPoolName());
+        LOG.warn("FINISHED POOL CREATION: {}", tomcatConfig.getPoolName());
         LOG.warn(MSG_LINE);
 
     }
 
-
-    private static void startConnectionCleaner(List<PeConnectionWrapper> connections, String poolName) {
+    private static void startConnectionCleaner(List<PeConnectionWrapper> connections,
+            PoolConfiguration poolConfiguration) {
         LOG.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-        LOG.info("Starting connection clean for [{}]",poolName);
-        scheduledExecutor.scheduleAtFixedRate(new ConnectionCleaner(connections, poolName), 0, ConnectionCleaner.CONNECTION_CLEANER_PERIOD_SECS, TimeUnit.SECONDS);
+        LOG.info("Starting connection clean for [{}]", poolConfiguration.getPoolName());
+        int cofigTimeOutSecs = poolConfiguration.getRemoveAbandonedTimeout();
+
+
+        int finalSeconds = cofigTimeOutSecs;
+
+        if (cofigTimeOutSecs <= 0) {
+            finalSeconds = ConnectionCleaner.CONNECTION_CLEANER_PERIOD_SECS;
+        }
+
+        scheduledExecutor.scheduleAtFixedRate(new ConnectionCleaner(connections, poolConfiguration.getPoolName()), 0,
+                finalSeconds, TimeUnit.SECONDS);
     }
 
     public Connection getConnection() throws SQLException {
@@ -104,11 +102,8 @@ public class DataSource implements javax.sql.DataSource {
     }
 
     private PeConnectionWrapper wrapConnection(Connection connection) {
-        return PeConnectionWrapper.from(hikariDataSource.getPoolName(),
-                connection,
-                poolProperties.getRemoveAbandonedTimeout(),
-                TimeUnit.SECONDS,
-                connections);
+        return PeConnectionWrapper.from(hikariDataSource.getPoolName(), connection,
+                poolProperties.getRemoveAbandonedTimeout(), TimeUnit.SECONDS, connections);
     }
 
     public PrintWriter getLogWriter() throws SQLException {
