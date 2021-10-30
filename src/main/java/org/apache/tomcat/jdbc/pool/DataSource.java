@@ -66,6 +66,7 @@ public class DataSource implements javax.sql.DataSource {
             config.setConnectionTestQuery(tomcatConfig.getValidationQuery());
         }
 
+        config.setIdleTimeout(tomcatConfig.getMinEvictableIdleTimeMillis());
         startConnectionCleaner(connections, tomcatConfig);
 
         hikariDataSource = new HikariDataSource(config);

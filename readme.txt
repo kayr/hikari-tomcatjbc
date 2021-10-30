@@ -18,6 +18,8 @@ config.setPoolName(poolProperties.getPoolName());
 config.setJdbcUrl(poolProperties.getUrl());
 config.setUsername(poolProperties.getUsername());
 config.setPassword(poolProperties.getPassword());
+config.setIdleTimeout(poolProperties.getMinEvictableIdleTimeMillis());
+
 
 POOL SIZE
 ------------------------------
